@@ -1,0 +1,112 @@
+import type { Mission } from '@/types/domain';
+
+export const missions: Mission[] = [
+  {
+    id: 'mission-day-01',
+    dayNumber: 1,
+    title: 'Bước Chân Đầu Tiên',
+    kidTitle: 'Bước Chân Đầu Tiên',
+    story: 'Bạn thú vừa vào nhà mới. Con cùng vận động để trải chiếc thảm đầu tiên nhé!',
+    youtubeVideoId: 'VIDEO_ID_TO_BE_SUPPLIED_01',
+    durationMinutes: 7,
+    difficulty: 'easy',
+    rewardStars: 2,
+    rewardItemId: 'rug-rainbow',
+    parentSafetyNote: 'Tập trên nền không trơn, có người lớn bên cạnh.',
+    isActive: true,
+  },
+  {
+    id: 'mission-day-02',
+    dayNumber: 2,
+    title: 'Vượt Suối Lấp Lánh',
+    kidTitle: 'Vượt Suối Lấp Lánh',
+    story: 'Hôm nay bạn thú cần chiếc giường êm sau chuyến phiêu lưu.',
+    youtubeVideoId: 'VIDEO_ID_TO_BE_SUPPLIED_02',
+    durationMinutes: 8,
+    difficulty: 'easy',
+    rewardStars: 2,
+    rewardItemId: 'bed-cloud',
+    parentSafetyNote: 'Quan sát bé nếu bài có động tác nhảy.',
+    isActive: true,
+  },
+  {
+    id: 'mission-day-03',
+    dayNumber: 3,
+    title: 'Leo Đồi Tìm Sao',
+    kidTitle: 'Leo Đồi Tìm Sao',
+    story: 'Cùng tìm chiếc đèn sao để phòng sáng lung linh.',
+    youtubeVideoId: 'VIDEO_ID_TO_BE_SUPPLIED_03',
+    durationMinutes: 7,
+    difficulty: 'easy',
+    rewardStars: 2,
+    rewardItemId: 'lamp-star',
+    parentSafetyNote: 'Cho bé nghỉ nếu thấy mệt hoặc khó chịu.',
+    isActive: true,
+  },
+  {
+    id: 'mission-day-04',
+    dayNumber: 4,
+    title: 'Giữ Cầu Thật Vững',
+    kidTitle: 'Giữ Cầu Thật Vững',
+    story: 'Con giúp bạn thú mở chiếc cửa sổ nhìn ra vườn nhé.',
+    youtubeVideoId: 'VIDEO_ID_TO_BE_SUPPLIED_04',
+    durationMinutes: 8,
+    difficulty: 'medium',
+    rewardStars: 2,
+    rewardItemId: 'window-magic',
+    parentSafetyNote: 'Cần người lớn quan sát nếu có giữ thăng bằng.',
+    isActive: true,
+  },
+  {
+    id: 'mission-day-05',
+    dayNumber: 5,
+    title: 'Vũ Điệu Trong Vườn',
+    kidTitle: 'Vũ Điệu Trong Vườn',
+    story: 'Một chậu cây nhỏ sẽ làm căn phòng tươi vui hơn.',
+    youtubeVideoId: 'VIDEO_ID_TO_BE_SUPPLIED_05',
+    durationMinutes: 9,
+    difficulty: 'medium',
+    rewardStars: 3,
+    rewardItemId: 'plant-happy',
+    parentSafetyNote: 'Chừa đủ không gian vận động xung quanh bé.',
+    isActive: true,
+  },
+  {
+    id: 'mission-day-06',
+    dayNumber: 6,
+    title: 'Đường Đua Vui Vẻ',
+    kidTitle: 'Đường Đua Vui Vẻ',
+    story: 'Bạn thú muốn đội chiếc mũ đặc biệt để đi khám phá.',
+    youtubeVideoId: 'VIDEO_ID_TO_BE_SUPPLIED_06',
+    durationMinutes: 8,
+    difficulty: 'medium',
+    rewardStars: 3,
+    rewardItemId: 'hat-adventure',
+    parentSafetyNote: 'Dừng nếu bé trượt chân hoặc thấy đau.',
+    isActive: true,
+  },
+  {
+    id: 'mission-day-07',
+    dayNumber: 7,
+    title: 'Mở Rương Kho Báu',
+    kidTitle: 'Mở Rương Kho Báu',
+    story: 'Hoàn thành hành trình để mở rương quà trong phòng!',
+    youtubeVideoId: 'VIDEO_ID_TO_BE_SUPPLIED_07',
+    durationMinutes: 10,
+    difficulty: 'medium',
+    rewardStars: 4,
+    rewardItemId: 'toy-treasure-chest',
+    parentSafetyNote: 'Phụ huynh cùng bé hoàn thành buổi cuối thật vui.',
+    isActive: true,
+  },
+];
+
+export function getMissionById(id: string): Mission | undefined {
+  return missions.find((m) => m.id === id);
+}
+
+export function getNextMission(completedMissionIds: string[]): Mission | undefined {
+  return missions.find(
+    (m) => m.isActive && !completedMissionIds.includes(m.id)
+  );
+}
