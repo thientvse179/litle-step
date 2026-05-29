@@ -25,9 +25,9 @@ export function PrimaryButton({
       disabled={disabled}
       whileTap={disabled ? undefined : { scale: 0.95 }}
       className={cn(
-        'w-full min-h-[48px] px-6 py-3 rounded-[var(--radius-button)]',
-        'bg-accent text-white font-semibold text-lg',
-        'shadow-md active:shadow-sm',
+        'w-full min-h-[56px] md:min-h-[64px] px-6 py-3.5 rounded-[var(--radius-button)]',
+        'bg-accent text-white font-display font-bold text-xl md:text-2xl',
+        'shadow-lg active:shadow-sm',
         'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent focus-visible:outline-none',
         'disabled:opacity-50 disabled:cursor-not-allowed',
         'transition-colors',

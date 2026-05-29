@@ -24,14 +24,45 @@
   --color-text-secondary: #44403c;
   --color-success: #22c55e;
   --color-error: #ef4444;
+
+  --font-sans: var(--font-body), system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-display), system-ui, sans-serif;
 }
 
 body {
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body), system-ui, -apple-system, sans-serif;
+  font-size: 18px;
+  line-height: 1.5;
+  font-weight: 500;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
+}
+
+/* Headings and big numbers use the rounded, playful display font */
+h1, h2, h3 {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+h1 {
+  font-size: 1.75rem;
+}
+
+h2 {
+  font-size: 1.4rem;
+}
+
+/* Utility for game-style numbers (stars, counts) */
+.font-display {
+  font-family: var(--font-display), system-ui, sans-serif;
+}
+
+/* Numeric figures: tabular so counts don't jump around */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Focus-visible styles for keyboard navigation */
@@ -48,5 +79,35 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ===== Tablet / iPad responsive (768px+) ===== */
+@media (min-width: 768px) {
+  body {
+    font-size: 20px;
+  }
+
+  h1 {
+    font-size: 2.25rem;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+  }
+}
+
+/* ===== Large tablet / iPad Pro (1024px+) ===== */
+@media (min-width: 1024px) {
+  body {
+    font-size: 22px;
+  }
+
+  h1 {
+    font-size: 2.5rem;
+  }
+
+  h2 {
+    font-size: 2rem;
   }
 }

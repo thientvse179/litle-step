@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useProgressStore } from '@/stores/progress-store';
 import { getCharacterById } from '@/data/characters';
-import { getMissionById, getNextMission, missions } from '@/data/missions';
+import { getNextMission, getTotalMissions } from '@/data/missions';
 import { HydrationGuard } from '@/components/common/hydration-guard';
 import { PageShell, PrimaryButton, SecondaryButton } from '@/components/kid-ui';
 
@@ -24,8 +24,9 @@ function ParentContent() {
   const character = progress.selectedCharacterId
     ? getCharacterById(progress.selectedCharacterId)
     : null;
-  const completedIds = progress.completedMissions.map((c) => c.missionId);
-  const nextMission = getNextMission(completedIds);
+  const completedToday = progress.dailyProgress.completedMissionIds;
+  const totalMissions = getTotalMissions();
+  const nextMission = getNextMission(completedToday);
 
   const handleReset = () => {
     resetProgress();
@@ -70,50 +71,38 @@ function ParentContent() {
 
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div className="bg-amber-50 rounded-lg p-2 text-center">
-            <p className="font-semibold text-lg">{progress.totalStars}</p>
+            <p className="font-display font-extrabold text-2xl tabular-nums">{progress.totalStars}</p>
             <p className="text-text-secondary">Sao</p>
           </div>
           <div className="bg-green-50 rounded-lg p-2 text-center">
-            <p className="font-semibold text-lg">
-              {completedIds.length}/{missions.length}
+            <p className="font-display font-extrabold text-2xl tabular-nums">
+              {progress.totalDaysCompleted}
             </p>
-            <p className="text-text-secondary">Nhiệm vụ</p>
+            <p className="text-text-secondary">Ngày hoàn thành</p>
           </div>
         </div>
 
         <div className="text-sm">
-          <p className="font-medium mb-1">Vật phẩm đã mở khóa:</p>
+          <p className="font-medium mb-1">Hôm nay:</p>
           <p className="text-text-secondary">
-            {progress.unlockedItemIds.length > 0
-              ? `${progress.unlockedItemIds.length} vật phẩm`
-              : 'Chưa có'}
+            {completedToday.length}/{totalMissions} bài đã tập
           </p>
         </div>
       </div>
 
-      {/* Completion history */}
+      {/* Today's progress */}
       <div className="bg-bg-card rounded-[var(--radius-card)] p-4 shadow-sm">
-        <h2 className="font-semibold mb-2">Lịch sử tập luyện</h2>
-        {progress.completedMissions.length === 0 ? (
-          <p className="text-sm text-text-secondary">Chưa có buổi tập nào.</p>
-        ) : (
-          <div className="space-y-2">
-            {progress.completedMissions.map((completion) => {
-              const m = getMissionById(completion.missionId);
-              return (
-                <div
-                  key={completion.missionId}
-                  className="flex items-center justify-between text-sm"
-                >
-                  <span>{m?.kidTitle ?? completion.missionId}</span>
-                  <span className="text-text-secondary text-xs">
-                    {new Date(completion.completedAt).toLocaleDateString('vi-VN')}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <h2 className="font-semibold mb-2">Tiến độ hôm nay</h2>
+        <div className="w-full h-3 bg-accent-soft/50 rounded-full overflow-hidden mb-2">
+          <div
+            className="h-full bg-accent rounded-full"
+            style={{ width: `${(completedToday.length / totalMissions) * 100}%` }}
+          />
+        </div>
+        <p className="text-sm text-text-secondary">
+          {completedToday.length}/{totalMissions} bài đã tập
+          {progress.dailyProgress.dailyRewardClaimed && ' • ✅ Đã nhận quà'}
+        </p>
       </div>
 
       {/* Next mission safety note */}

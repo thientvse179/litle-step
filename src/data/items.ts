@@ -1,15 +1,14 @@
-import type { Item } from '@/types/domain';
+import type { Item, DailyReward } from '@/types/domain';
 
 export const items: Item[] = [
-  // Room decoration items
+  // Room decoration items (daily rewards)
   {
     id: 'rug-rainbow',
     name: 'Thảm cầu vồng',
     type: 'room-decoration',
     imageSrc: '/assets/items/rug-rainbow.svg',
     roomSlotId: 'floor-rug',
-    unlockSource: 'mission',
-    unlockMissionId: 'mission-day-01',
+    unlockSource: 'daily-reward',
   },
   {
     id: 'bed-cloud',
@@ -17,8 +16,7 @@ export const items: Item[] = [
     type: 'room-decoration',
     imageSrc: '/assets/items/bed-cloud.svg',
     roomSlotId: 'bed',
-    unlockSource: 'mission',
-    unlockMissionId: 'mission-day-02',
+    unlockSource: 'daily-reward',
   },
   {
     id: 'lamp-star',
@@ -26,8 +24,7 @@ export const items: Item[] = [
     type: 'room-decoration',
     imageSrc: '/assets/items/lamp-star.svg',
     roomSlotId: 'lamp',
-    unlockSource: 'mission',
-    unlockMissionId: 'mission-day-03',
+    unlockSource: 'daily-reward',
   },
   {
     id: 'window-magic',
@@ -35,8 +32,7 @@ export const items: Item[] = [
     type: 'room-decoration',
     imageSrc: '/assets/items/window-magic.svg',
     roomSlotId: 'window',
-    unlockSource: 'mission',
-    unlockMissionId: 'mission-day-04',
+    unlockSource: 'daily-reward',
   },
   {
     id: 'plant-happy',
@@ -44,8 +40,7 @@ export const items: Item[] = [
     type: 'room-decoration',
     imageSrc: '/assets/items/plant-happy.svg',
     roomSlotId: 'plant',
-    unlockSource: 'mission',
-    unlockMissionId: 'mission-day-05',
+    unlockSource: 'daily-reward',
   },
   {
     id: 'toy-treasure-chest',
@@ -53,19 +48,28 @@ export const items: Item[] = [
     type: 'room-decoration',
     imageSrc: '/assets/items/toy-treasure-chest.svg',
     roomSlotId: 'toy',
-    unlockSource: 'mission',
-    unlockMissionId: 'mission-day-07',
+    unlockSource: 'daily-reward',
   },
-  // Character accessories
+  // Character accessories (daily rewards)
   {
     id: 'hat-adventure',
     name: 'Mũ phiêu lưu',
     type: 'character-accessory',
     imageSrc: '/assets/items/hat-adventure.svg',
     compatibleCharacterIds: ['rabbit-cloud', 'bear-honey', 'cat-star'],
-    unlockSource: 'mission',
-    unlockMissionId: 'mission-day-06',
+    unlockSource: 'daily-reward',
   },
+];
+
+/** Daily rewards cycle — bé nhận quà khác nhau mỗi ngày hoàn thành full */
+export const dailyRewards: DailyReward[] = [
+  { dayIndex: 0, itemId: 'rug-rainbow', bonusStars: 3 },
+  { dayIndex: 1, itemId: 'bed-cloud', bonusStars: 3 },
+  { dayIndex: 2, itemId: 'lamp-star', bonusStars: 3 },
+  { dayIndex: 3, itemId: 'window-magic', bonusStars: 4 },
+  { dayIndex: 4, itemId: 'plant-happy', bonusStars: 4 },
+  { dayIndex: 5, itemId: 'hat-adventure', bonusStars: 5 },
+  { dayIndex: 6, itemId: 'toy-treasure-chest', bonusStars: 5 },
 ];
 
 export function getItemById(id: string): Item | undefined {
@@ -85,4 +89,10 @@ export function getUnlockedAccessories(unlockedItemIds: string[]): Item[] {
   return items.filter(
     (i) => i.type === 'character-accessory' && unlockedItemIds.includes(i.id)
   );
+}
+
+/** Get today's daily reward based on total days completed (cycles through list) */
+export function getDailyReward(totalDaysCompleted: number): DailyReward {
+  const index = totalDaysCompleted % dailyRewards.length;
+  return dailyRewards[index];
 }

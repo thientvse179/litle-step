@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback, useState, useId } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { YouTubePlayerAdapter } from '@/lib/youtube';
 import type { PlayerState } from '@/lib/youtube';
 
@@ -11,34 +11,46 @@ interface YouTubePlayerProps {
 }
 
 export function YouTubePlayer({ videoId, onStateChange, onError }: YouTubePlayerProps) {
-  const adapterRef = useRef<YouTubePlayerAdapter | null>(null);
-  const containerId = useId();
-  const stableContainerId = `yt-player-${containerId.replace(/:/g, '')}`;
+  const reactId = useId();
+  const containerId = `yt-player-${reactId.replace(/:/g, '')}`;
   const [loadError, setLoadError] = useState(false);
 
-  const handleError = useCallback(() => {
-    setLoadError(true);
-    onError?.();
-  }, [onError]);
+  // Keep callbacks in refs so the player effect runs only when videoId changes
+  const onStateChangeRef = useRef(onStateChange);
+  const onErrorRef = useRef(onError);
 
   useEffect(() => {
-    const adapter = new YouTubePlayerAdapter();
-    adapterRef.current = adapter;
+    onStateChangeRef.current = onStateChange;
+    onErrorRef.current = onError;
+  });
 
-    adapter.initialize({
-      videoId,
-      containerId: stableContainerId,
-      events: {
-        onReady: () => onStateChange?.('ready'),
-        onStateChange: (state) => onStateChange?.(state),
-        onError: () => handleError(),
-      },
-    }).catch(() => handleError());
+  useEffect(() => {
+    let cancelled = false;
+    const adapter = new YouTubePlayerAdapter();
+
+    function handleFailure() {
+      if (cancelled) return;
+      setLoadError(true);
+      onErrorRef.current?.();
+    }
+
+    adapter
+      .initialize({
+        videoId,
+        containerId,
+        events: {
+          onReady: () => onStateChangeRef.current?.('ready'),
+          onStateChange: (state) => onStateChangeRef.current?.(state),
+          onError: () => handleFailure(),
+        },
+      })
+      .catch(() => handleFailure());
 
     return () => {
+      cancelled = true;
       adapter.destroy();
     };
-  }, [videoId, onStateChange, handleError, stableContainerId]);
+  }, [videoId, containerId]);
 
   if (loadError) {
     return (
@@ -52,7 +64,7 @@ export function YouTubePlayer({ videoId, onStateChange, onError }: YouTubePlayer
 
   return (
     <div className="aspect-video w-full rounded-xl overflow-hidden bg-gray-900">
-      <div id={stableContainerId} className="w-full h-full" />
+      <div id={containerId} className="w-full h-full" />
     </div>
   );
 }

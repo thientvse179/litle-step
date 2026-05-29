@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useProgressStore } from '@/stores/progress-store';
 import { getItemsForSlot } from '@/data/items';
 import { HydrationGuard } from '@/components/common/hydration-guard';
-import { PageShell, SecondaryButton, KidCard } from '@/components/kid-ui';
+import { PageShell, KidCard } from '@/components/kid-ui';
 import { RoomPreview } from '@/components/room/room-preview';
+import { BottomNav } from '@/components/common/bottom-nav';
 import type { RoomSlotId } from '@/types/domain';
 
 const SLOTS: { id: RoomSlotId; label: string; emoji: string }[] = [
@@ -28,7 +28,6 @@ export default function RoomPage() {
 }
 
 function RoomContent() {
-  const router = useRouter();
   const { progress, equipRoomItem, clearRoomSlot } = useProgressStore();
   const [selectedSlot, setSelectedSlot] = useState<RoomSlotId | null>(null);
 
@@ -41,15 +40,10 @@ function RoomContent() {
     : undefined;
 
   return (
-    <PageShell>
+    <>
+      <PageShell>
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">Trang trí phòng</h1>
-        <SecondaryButton
-          onClick={() => router.push('/')}
-          className="w-auto text-sm px-3 py-2 min-h-[44px]"
-        >
-          Về nhà
-        </SecondaryButton>
       </div>
 
       <RoomPreview />
@@ -122,6 +116,8 @@ function RoomContent() {
         </div>
       )}
     </PageShell>
+    <BottomNav />
+    </>
   );
 }
 

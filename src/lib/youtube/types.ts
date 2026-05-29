@@ -27,6 +27,7 @@ declare global {
         elementId: string,
         config: {
           videoId: string;
+          host?: string;
           playerVars?: Record<string, string | number>;
           events?: {
             onReady?: (event: { target: YTPlayerInstance }) => void;

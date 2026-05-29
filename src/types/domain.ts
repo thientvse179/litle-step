@@ -20,7 +20,7 @@ export interface Character {
 
 export interface Mission {
   id: string;
-  dayNumber: number;
+  order: number;
   title: string;
   kidTitle: string;
   story: string;
@@ -28,9 +28,16 @@ export interface Mission {
   durationMinutes: number;
   difficulty: Difficulty;
   rewardStars: number;
-  rewardItemId: string;
+  requiredReps: number;
   parentSafetyNote: string;
   isActive: boolean;
+}
+
+/** Daily reward item — one per day, cycles through the list */
+export interface DailyReward {
+  dayIndex: number;
+  itemId: string;
+  bonusStars: number;
 }
 
 export interface Item {
@@ -40,15 +47,15 @@ export interface Item {
   imageSrc: string;
   roomSlotId?: RoomSlotId;
   compatibleCharacterIds?: CharacterId[];
-  unlockSource: 'mission' | 'stars';
-  unlockMissionId?: string;
-  requiredStars?: number;
+  unlockSource: 'mission' | 'daily-reward' | 'stars';
 }
 
-export interface WorkoutCompletion {
-  missionId: string;
-  completedAt: string;
-  videoEnded: boolean;
+/** Tracks which missions were completed today */
+export interface DailyProgress {
+  date: string; // YYYY-MM-DD
+  completedMissionIds: string[];
+  missionReps: Record<string, number>; // missionId → reps done today
+  dailyRewardClaimed: boolean;
 }
 
 export interface ChildProgressState {
@@ -56,16 +63,23 @@ export interface ChildProgressState {
   childNickname?: string;
   selectedCharacterId?: CharacterId;
   totalStars: number;
-  completedMissions: WorkoutCompletion[];
+  totalDaysCompleted: number;
+  dailyProgress: DailyProgress;
   unlockedItemIds: string[];
   equippedAccessoryItemIds: string[];
   roomLayout: Partial<Record<RoomSlotId, string>>;
 }
 
-export type CompletionResult =
-  | { status: 'awarded'; starsAdded: number; unlockedItemId: string }
-  | { status: 'already-completed'; starsAdded: 0; unlockedItemId?: string }
+export type DailyCompletionResult =
+  | { status: 'rep-completed'; repsNow: number; repsRequired: number; starsAdded: number }
+  | { status: 'mission-completed'; starsAdded: number }
+  | { status: 'already-done' }
   | { status: 'invalid'; reason: string };
+
+export type DailyRewardResult =
+  | { status: 'awarded'; starsAdded: number; unlockedItemId: string }
+  | { status: 'not-ready'; reason: string }
+  | { status: 'already-claimed' };
 
 export type EquipResult =
   | { status: 'equipped' }

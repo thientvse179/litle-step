@@ -1,10 +1,10 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useProgressStore } from '@/stores/progress-store';
 import { getUnlockedAccessories } from '@/data/items';
 import { HydrationGuard } from '@/components/common/hydration-guard';
-import { PageShell, SecondaryButton, KidCard } from '@/components/kid-ui';
+import { PageShell, KidCard } from '@/components/kid-ui';
+import { BottomNav } from '@/components/common/bottom-nav';
 
 export default function WardrobePage() {
   return (
@@ -15,21 +15,15 @@ export default function WardrobePage() {
 }
 
 function WardrobeContent() {
-  const router = useRouter();
   const { progress, equipAccessory, removeAccessory } = useProgressStore();
 
   const accessories = getUnlockedAccessories(progress.unlockedItemIds);
 
   return (
-    <PageShell>
+    <>
+      <PageShell>
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">Phụ kiện</h1>
-        <SecondaryButton
-          onClick={() => router.push('/')}
-          className="w-auto text-sm px-3 py-2 min-h-[44px]"
-        >
-          Về nhà
-        </SecondaryButton>
       </div>
 
       {/* Character preview */}
@@ -90,5 +84,7 @@ function WardrobeContent() {
         </div>
       )}
     </PageShell>
+    <BottomNav />
+    </>
   );
 }

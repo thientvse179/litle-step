@@ -22,7 +22,7 @@ export function KidCard({
       onKeyDown={onClick ? (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
       whileTap={onClick ? { scale: 0.97 } : undefined}
       className={cn(
-        'rounded-[var(--radius-card)] bg-bg-card p-4 shadow-sm',
+        'rounded-[var(--radius-card)] bg-bg-card p-4 md:p-5 shadow-sm',
         'transition-all duration-200',
         'focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none',
         onClick && 'cursor-pointer active:shadow-md',

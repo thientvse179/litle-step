@@ -23,7 +23,7 @@ export const CharacterSchema = z.object({
 
 export const MissionSchema = z.object({
   id: z.string().min(1),
-  dayNumber: z.number().int().min(1).max(7),
+  order: z.number().int().min(1).max(7),
   title: z.string().min(1),
   kidTitle: z.string().min(1),
   story: z.string().min(1),
@@ -31,7 +31,7 @@ export const MissionSchema = z.object({
   durationMinutes: z.number().positive(),
   difficulty: DifficultySchema,
   rewardStars: z.number().int().positive(),
-  rewardItemId: z.string().min(1),
+  requiredReps: z.number().int().min(1),
   parentSafetyNote: z.string().min(1),
   isActive: z.boolean(),
 });
@@ -43,15 +43,14 @@ export const ItemSchema = z.object({
   imageSrc: z.string().min(1),
   roomSlotId: RoomSlotIdSchema.optional(),
   compatibleCharacterIds: z.array(CharacterIdSchema).optional(),
-  unlockSource: z.enum(['mission', 'stars']),
-  unlockMissionId: z.string().optional(),
-  requiredStars: z.number().int().positive().optional(),
+  unlockSource: z.enum(['daily-reward', 'stars']),
 });
 
-export const WorkoutCompletionSchema = z.object({
-  missionId: z.string().min(1),
-  completedAt: z.string().min(1),
-  videoEnded: z.boolean(),
+export const DailyProgressSchema = z.object({
+  date: z.string().min(1),
+  completedMissionIds: z.array(z.string()),
+  missionReps: z.record(z.string(), z.number()).optional().default({}),
+  dailyRewardClaimed: z.boolean(),
 });
 
 export const ChildProgressStateSchema = z.object({
@@ -59,7 +58,8 @@ export const ChildProgressStateSchema = z.object({
   childNickname: z.string().optional(),
   selectedCharacterId: CharacterIdSchema.optional(),
   totalStars: z.number().int().min(0),
-  completedMissions: z.array(WorkoutCompletionSchema),
+  totalDaysCompleted: z.number().int().min(0),
+  dailyProgress: DailyProgressSchema,
   unlockedItemIds: z.array(z.string()),
   equippedAccessoryItemIds: z.array(z.string()),
   roomLayout: z.record(z.string(), z.string()).optional().default({}),

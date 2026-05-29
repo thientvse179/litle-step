@@ -27,14 +27,21 @@ export class YouTubePlayerAdapter {
       return;
     }
 
+    // Make sure the container element exists in the DOM
+    const container = document.getElementById(config.containerId);
+    if (!container) {
+      config.events?.onError?.(0);
+      return;
+    }
+
     this.player = new window.YT.Player(config.containerId, {
       videoId: config.videoId,
+      host: 'https://www.youtube-nocookie.com',
       playerVars: {
         playsinline: 1,
         rel: 0,
         modestbranding: 1,
         origin: window.location.origin,
-        widget_referrer: window.location.href,
       },
       events: {
         onReady: () => {

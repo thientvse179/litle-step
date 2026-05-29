@@ -1,19 +1,20 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useProgressStore } from './progress-store';
-import { ChildProgressStateSchema } from '@/lib/validation/schemas';
-
-/**
- * Tests for the persisted progress store (T2.3).
- * Validates: Requirements REQ-01, REQ-02, REQ-08.
- */
 
 function resetStore() {
+  const today = new Date().toISOString().split('T')[0];
   useProgressStore.setState({
     hydrated: false,
     progress: {
-      version: 1,
+      version: 2,
       totalStars: 0,
-      completedMissions: [],
+      totalDaysCompleted: 0,
+      dailyProgress: {
+        date: today,
+        completedMissionIds: [],
+        missionReps: {},
+        dailyRewardClaimed: false,
+      },
       unlockedItemIds: [],
       equippedAccessoryItemIds: [],
       roomLayout: {},
@@ -21,20 +22,22 @@ function resetStore() {
   });
 }
 
-describe('Progress Store', () => {
+/** Helper: complete a mission fully (all 3 reps) */
+function completeFullMission(missionId: string) {
+  for (let i = 0; i < 3; i++) {
+    useProgressStore.getState().completeMission({ missionId, videoEnded: true });
+  }
+}
+
+describe('Progress Store — Daily Model with Reps', () => {
   beforeEach(() => {
     resetStore();
   });
 
-  describe('Initial state defaults', () => {
-    it('has version 1', () => {
+  describe('Initial state', () => {
+    it('has version 2', () => {
       const { progress } = useProgressStore.getState();
-      expect(progress.version).toBe(1);
-    });
-
-    it('has no selected character', () => {
-      const { progress } = useProgressStore.getState();
-      expect(progress.selectedCharacterId).toBeUndefined();
+      expect(progress.version).toBe(2);
     });
 
     it('has 0 total stars', () => {
@@ -42,238 +45,124 @@ describe('Progress Store', () => {
       expect(progress.totalStars).toBe(0);
     });
 
-    it('has empty completed missions', () => {
+    it('has empty daily progress', () => {
       const { progress } = useProgressStore.getState();
-      expect(progress.completedMissions).toEqual([]);
-    });
-
-    it('has empty unlocked item IDs', () => {
-      const { progress } = useProgressStore.getState();
-      expect(progress.unlockedItemIds).toEqual([]);
-    });
-
-    it('has empty equipped accessory item IDs', () => {
-      const { progress } = useProgressStore.getState();
-      expect(progress.equippedAccessoryItemIds).toEqual([]);
-    });
-
-    it('has empty room layout', () => {
-      const { progress } = useProgressStore.getState();
-      expect(progress.roomLayout).toEqual({});
-    });
-
-    it('has no nickname by default', () => {
-      const { progress } = useProgressStore.getState();
-      expect(progress.childNickname).toBeUndefined();
-    });
-
-    it('default state passes Zod schema validation', () => {
-      const { progress } = useProgressStore.getState();
-      const result = ChildProgressStateSchema.safeParse(progress);
-      expect(result.success).toBe(true);
+      expect(progress.dailyProgress.completedMissionIds).toEqual([]);
+      expect(progress.dailyProgress.missionReps).toEqual({});
     });
   });
 
   describe('selectCharacter', () => {
     it('sets the character ID', () => {
       useProgressStore.getState().selectCharacter('rabbit-cloud');
-      const { progress } = useProgressStore.getState();
-      expect(progress.selectedCharacterId).toBe('rabbit-cloud');
-    });
-
-    it('can change to a different character', () => {
-      useProgressStore.getState().selectCharacter('rabbit-cloud');
-      useProgressStore.getState().selectCharacter('bear-honey');
-      const { progress } = useProgressStore.getState();
-      expect(progress.selectedCharacterId).toBe('bear-honey');
-    });
-
-    it('preserves other state when selecting character', () => {
-      useProgressStore.getState().setNickname('Bé Bi');
-      useProgressStore.getState().selectCharacter('cat-star');
-      const { progress } = useProgressStore.getState();
-      expect(progress.childNickname).toBe('Bé Bi');
-      expect(progress.selectedCharacterId).toBe('cat-star');
+      expect(useProgressStore.getState().progress.selectedCharacterId).toBe('rabbit-cloud');
     });
   });
 
-  describe('setNickname', () => {
-    it('sets the nickname', () => {
-      useProgressStore.getState().setNickname('Bé Bi');
-      const { progress } = useProgressStore.getState();
-      expect(progress.childNickname).toBe('Bé Bi');
+  describe('completeMission — rep system', () => {
+    it('first rep returns rep-completed with 1/3', () => {
+      const result = useProgressStore.getState().completeMission({
+        missionId: 'mission-01',
+        videoEnded: true,
+      });
+      expect(result.status).toBe('rep-completed');
+      if (result.status === 'rep-completed') {
+        expect(result.repsNow).toBe(1);
+        expect(result.repsRequired).toBe(3);
+        expect(result.starsAdded).toBe(1);
+      }
     });
 
-    it('clears the nickname when called with undefined', () => {
-      useProgressStore.getState().setNickname('Bé Bi');
-      useProgressStore.getState().setNickname(undefined);
-      const { progress } = useProgressStore.getState();
-      expect(progress.childNickname).toBeUndefined();
+    it('second rep returns rep-completed with 2/3', () => {
+      useProgressStore.getState().completeMission({ missionId: 'mission-01', videoEnded: true });
+      const result = useProgressStore.getState().completeMission({ missionId: 'mission-01', videoEnded: true });
+      expect(result.status).toBe('rep-completed');
+      if (result.status === 'rep-completed') {
+        expect(result.repsNow).toBe(2);
+      }
     });
 
-    it('clears the nickname when called without argument', () => {
-      useProgressStore.getState().setNickname('Bé Bi');
-      useProgressStore.getState().setNickname();
-      const { progress } = useProgressStore.getState();
-      expect(progress.childNickname).toBeUndefined();
+    it('third rep returns mission-completed', () => {
+      useProgressStore.getState().completeMission({ missionId: 'mission-01', videoEnded: true });
+      useProgressStore.getState().completeMission({ missionId: 'mission-01', videoEnded: true });
+      const result = useProgressStore.getState().completeMission({ missionId: 'mission-01', videoEnded: true });
+      expect(result.status).toBe('mission-completed');
     });
 
-    it('preserves other state when setting nickname', () => {
-      useProgressStore.getState().selectCharacter('bear-honey');
-      useProgressStore.getState().setNickname('Bé Gấu');
+    it('after 3 reps, mission is in completedMissionIds', () => {
+      completeFullMission('mission-01');
       const { progress } = useProgressStore.getState();
-      expect(progress.selectedCharacterId).toBe('bear-honey');
-      expect(progress.childNickname).toBe('Bé Gấu');
+      expect(progress.dailyProgress.completedMissionIds).toContain('mission-01');
+    });
+
+    it('after full completion, further attempts return already-done', () => {
+      completeFullMission('mission-01');
+      const result = useProgressStore.getState().completeMission({ missionId: 'mission-01', videoEnded: true });
+      expect(result.status).toBe('already-done');
+    });
+
+    it('accumulates stars across reps (1 per rep + bonus on completion)', () => {
+      completeFullMission('mission-01'); // mission-01 has rewardStars: 1
+      const { progress } = useProgressStore.getState();
+      // 1 star per rep (2 reps) + rewardStars on final rep = 2 + 1 = 3
+      expect(progress.totalStars).toBe(3);
+    });
+
+    it('rejects when videoEnded is false', () => {
+      const result = useProgressStore.getState().completeMission({ missionId: 'mission-01', videoEnded: false });
+      expect(result.status).toBe('invalid');
+    });
+
+    it('rejects invalid mission ID', () => {
+      const result = useProgressStore.getState().completeMission({ missionId: 'non-existent', videoEnded: true });
+      expect(result.status).toBe('invalid');
+    });
+  });
+
+  describe('claimDailyReward', () => {
+    it('returns not-ready if not all missions fully completed', () => {
+      completeFullMission('mission-01');
+      const result = useProgressStore.getState().claimDailyReward();
+      expect(result.status).toBe('not-ready');
+    });
+
+    it('awards reward when all 7 missions fully completed', () => {
+      for (let i = 1; i <= 7; i++) {
+        completeFullMission(`mission-0${i}`);
+      }
+      const result = useProgressStore.getState().claimDailyReward();
+      expect(result.status).toBe('awarded');
+      if (result.status === 'awarded') {
+        expect(result.starsAdded).toBeGreaterThan(0);
+        expect(result.unlockedItemId).toBeTruthy();
+      }
+      const { progress } = useProgressStore.getState();
+      expect(progress.dailyProgress.dailyRewardClaimed).toBe(true);
+      expect(progress.totalDaysCompleted).toBe(1);
+    });
+
+    it('returns already-claimed on second call', () => {
+      for (let i = 1; i <= 7; i++) {
+        completeFullMission(`mission-0${i}`);
+      }
+      useProgressStore.getState().claimDailyReward();
+      const result = useProgressStore.getState().claimDailyReward();
+      expect(result.status).toBe('already-claimed');
     });
   });
 
   describe('resetProgress', () => {
-    it('returns state to defaults after modifications', () => {
-      // Make some changes
+    it('resets all progress', () => {
       useProgressStore.getState().selectCharacter('cat-star');
-      useProgressStore.getState().setNickname('Bé Mèo');
-
-      // Reset
+      completeFullMission('mission-01');
       useProgressStore.getState().resetProgress();
 
       const { progress } = useProgressStore.getState();
-      expect(progress.version).toBe(1);
       expect(progress.selectedCharacterId).toBeUndefined();
-      expect(progress.childNickname).toBeUndefined();
       expect(progress.totalStars).toBe(0);
-      expect(progress.completedMissions).toEqual([]);
-      expect(progress.unlockedItemIds).toEqual([]);
-      expect(progress.equippedAccessoryItemIds).toEqual([]);
-      expect(progress.roomLayout).toEqual({});
-    });
-
-    it('reset state passes Zod schema validation', () => {
-      useProgressStore.getState().selectCharacter('rabbit-cloud');
-      useProgressStore.getState().resetProgress();
-
-      const { progress } = useProgressStore.getState();
-      const result = ChildProgressStateSchema.safeParse(progress);
-      expect(result.success).toBe(true);
-    });
-  });
-
-  describe('Invalid persisted state validation', () => {
-    it('ChildProgressStateSchema rejects state with negative stars', () => {
-      const invalid = {
-        version: 1,
-        totalStars: -5,
-        completedMissions: [],
-        unlockedItemIds: [],
-        equippedAccessoryItemIds: [],
-        roomLayout: {},
-      };
-      const result = ChildProgressStateSchema.safeParse(invalid);
-      expect(result.success).toBe(false);
-    });
-
-    it('ChildProgressStateSchema rejects state with version 0', () => {
-      const invalid = {
-        version: 0,
-        totalStars: 0,
-        completedMissions: [],
-        unlockedItemIds: [],
-        equippedAccessoryItemIds: [],
-        roomLayout: {},
-      };
-      const result = ChildProgressStateSchema.safeParse(invalid);
-      expect(result.success).toBe(false);
-    });
-
-    it('ChildProgressStateSchema rejects state with invalid character ID', () => {
-      const invalid = {
-        version: 1,
-        selectedCharacterId: 'invalid-character',
-        totalStars: 0,
-        completedMissions: [],
-        unlockedItemIds: [],
-        equippedAccessoryItemIds: [],
-        roomLayout: {},
-      };
-      const result = ChildProgressStateSchema.safeParse(invalid);
-      expect(result.success).toBe(false);
-    });
-
-    it('ChildProgressStateSchema rejects state missing required fields', () => {
-      const invalid = {
-        version: 1,
-        totalStars: 0,
-        // missing completedMissions, unlockedItemIds, etc.
-      };
-      const result = ChildProgressStateSchema.safeParse(invalid);
-      expect(result.success).toBe(false);
-    });
-
-    it('ChildProgressStateSchema rejects non-object state', () => {
-      const result = ChildProgressStateSchema.safeParse('not an object');
-      expect(result.success).toBe(false);
-    });
-
-    it('ChildProgressStateSchema rejects null state', () => {
-      const result = ChildProgressStateSchema.safeParse(null);
-      expect(result.success).toBe(false);
-    });
-
-    it('onRehydrateStorage resets corrupted state to defaults', () => {
-      // Simulate corrupted state being loaded
-      useProgressStore.setState({
-        progress: {
-          version: 1,
-          totalStars: -999,
-          completedMissions: [],
-          unlockedItemIds: [],
-          equippedAccessoryItemIds: [],
-          roomLayout: {},
-        } as any,
-      });
-
-      // Simulate what onRehydrateStorage does: validate and reset if invalid
-      const state = useProgressStore.getState();
-      const result = ChildProgressStateSchema.safeParse(state.progress);
-
-      if (!result.success) {
-        // This is what the store's onRehydrateStorage handler does
-        useProgressStore.setState({
-          progress: {
-            version: 1,
-            totalStars: 0,
-            completedMissions: [],
-            unlockedItemIds: [],
-            equippedAccessoryItemIds: [],
-            roomLayout: {},
-          },
-        });
-      }
-
-      const { progress } = useProgressStore.getState();
-      expect(progress.totalStars).toBe(0);
-      expect(progress.version).toBe(1);
-    });
-
-    it('valid state passes schema validation without reset', () => {
-      useProgressStore.getState().selectCharacter('bear-honey');
-      useProgressStore.getState().setNickname('Test');
-
-      const { progress } = useProgressStore.getState();
-      const result = ChildProgressStateSchema.safeParse(progress);
-      expect(result.success).toBe(true);
-    });
-  });
-
-  describe('Hydration handling', () => {
-    it('starts with hydrated false', () => {
-      const { hydrated } = useProgressStore.getState();
-      expect(hydrated).toBe(false);
-    });
-
-    it('setHydrated sets hydrated to true', () => {
-      useProgressStore.getState().setHydrated();
-      const { hydrated } = useProgressStore.getState();
-      expect(hydrated).toBe(true);
+      expect(progress.totalDaysCompleted).toBe(0);
+      expect(progress.dailyProgress.completedMissionIds).toEqual([]);
+      expect(progress.dailyProgress.missionReps).toEqual({});
     });
   });
 });

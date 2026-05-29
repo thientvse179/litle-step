@@ -5,6 +5,7 @@ import { getCharacterById } from '@/data/characters';
 import { getItemById } from '@/data/items';
 import type { RoomSlotId } from '@/types/domain';
 import { cn } from '@/lib/utils';
+import { motion } from 'motion/react';
 
 const SLOT_POSITIONS: Record<RoomSlotId, string> = {
   'floor-rug': 'bottom-4 left-1/2 -translate-x-1/2 w-24 h-12',
@@ -30,7 +31,7 @@ export function RoomPreview({ compact = false }: RoomPreviewProps) {
     <div
       className={cn(
         'relative rounded-[var(--radius-card)] overflow-hidden bg-gradient-to-b from-sky-100 to-sky-50',
-        compact ? 'h-48' : 'h-64'
+        compact ? 'h-48 md:h-64' : 'h-64 md:h-80'
       )}
       role="img"
       aria-label={`Phòng của ${character.name}`}
@@ -40,35 +41,41 @@ export function RoomPreview({ compact = false }: RoomPreviewProps) {
         🏠
       </div>
 
-      {/* Placed items */}
+      {/* Placed items — animate in */}
       {Object.entries(progress.roomLayout).map(([slotId, itemId]) => {
         if (!itemId) return null;
         const item = getItemById(itemId);
         if (!item) return null;
         const position = SLOT_POSITIONS[slotId as RoomSlotId];
         return (
-          <div
+          <motion.div
             key={slotId}
             className={cn('absolute', position)}
             aria-label={item.name}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', bounce: 0.4 }}
           >
-            <div className="w-full h-full flex items-center justify-center text-2xl">
+            <div className="w-full h-full flex items-center justify-center text-2xl md:text-3xl drop-shadow-md">
               {getItemEmoji(item.id)}
             </div>
-          </div>
+          </motion.div>
         );
       })}
 
-      {/* Character */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-4xl">
+      {/* Character — gentle bounce */}
+      <motion.div
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 text-4xl md:text-5xl"
+        animate={{ y: [0, -4, 0] }}
+        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+      >
         {getCharacterEmoji(character.id)}
-        {/* Equipped accessories */}
         {progress.equippedAccessoryItemIds.length > 0 && (
-          <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-lg">
+          <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-lg md:text-xl">
             🎩
           </span>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }

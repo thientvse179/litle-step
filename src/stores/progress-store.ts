@@ -3,24 +3,52 @@ import { persist } from 'zustand/middleware';
 import type {
   CharacterId,
   ChildProgressState,
-  CompletionResult,
+  DailyCompletionResult,
+  DailyRewardResult,
   EquipResult,
   RoomSlotId,
 } from '@/types/domain';
-import { getMissionById } from '@/data/missions';
-import { getItemById } from '@/data/items';
-import { ChildProgressStateSchema } from '@/lib/validation/schemas';
+import { getMissionById, missions } from '@/data/missions';
+import { getItemById, getDailyReward } from '@/data/items';
 
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2;
+
+function getTodayDate(): string {
+  return new Date().toISOString().split('T')[0];
+}
 
 function getDefaultProgress(): ChildProgressState {
   return {
     version: CURRENT_VERSION,
     totalStars: 0,
-    completedMissions: [],
+    totalDaysCompleted: 0,
+    dailyProgress: {
+      date: getTodayDate(),
+      completedMissionIds: [],
+      missionReps: {},
+      dailyRewardClaimed: false,
+    },
     unlockedItemIds: [],
     equippedAccessoryItemIds: [],
     roomLayout: {},
+  };
+}
+
+/** Ensure daily progress is for today — reset if it's a new day */
+function ensureTodayProgress(state: ChildProgressState): ChildProgressState {
+  const today = getTodayDate();
+  if (state.dailyProgress.date === today) {
+    return state;
+  }
+  // New day — reset daily progress
+  return {
+    ...state,
+    dailyProgress: {
+      date: today,
+      completedMissionIds: [],
+      missionReps: {},
+      dailyRewardClaimed: false,
+    },
   };
 }
 
@@ -30,7 +58,8 @@ interface ProgressStore {
   setHydrated: () => void;
   setNickname: (nickname?: string) => void;
   selectCharacter: (characterId: CharacterId) => void;
-  completeMission: (input: { missionId: string; videoEnded: boolean }) => CompletionResult;
+  completeMission: (input: { missionId: string; videoEnded: boolean }) => DailyCompletionResult;
+  claimDailyReward: () => DailyRewardResult;
   equipRoomItem: (input: { slotId: RoomSlotId; itemId: string }) => EquipResult;
   clearRoomSlot: (slotId: RoomSlotId) => void;
   equipAccessory: (itemId: string) => EquipResult;
@@ -58,7 +87,8 @@ export const useProgressStore = create<ProgressStore>()(
 
       completeMission: (input) => {
         const { missionId, videoEnded } = input;
-        const state = get();
+        const currentState = get();
+        const progress = ensureTodayProgress(currentState.progress);
 
         const mission = getMissionById(missionId);
         if (!mission || !mission.isActive) {
@@ -69,37 +99,100 @@ export const useProgressStore = create<ProgressStore>()(
           return { status: 'invalid', reason: 'Video has not ended' };
         }
 
-        const alreadyCompleted = state.progress.completedMissions.some(
-          (c) => c.missionId === missionId
-        );
-        if (alreadyCompleted) {
-          return { status: 'already-completed', starsAdded: 0 };
+        // Already fully completed today?
+        if (progress.dailyProgress.completedMissionIds.includes(missionId)) {
+          return { status: 'already-done' };
         }
 
-        const newCompletion = {
-          missionId,
-          completedAt: new Date().toISOString(),
-          videoEnded: true,
-        };
+        // Increment reps
+        const currentReps = progress.dailyProgress.missionReps[missionId] ?? 0;
+        const newReps = currentReps + 1;
+        const newMissionReps = { ...progress.dailyProgress.missionReps, [missionId]: newReps };
 
-        const newUnlockedItemIds = [...state.progress.unlockedItemIds];
-        if (!newUnlockedItemIds.includes(mission.rewardItemId)) {
-          newUnlockedItemIds.push(mission.rewardItemId);
-        }
+        // Check if mission is now fully completed (all reps done)
+        const isFullyDone = newReps >= mission.requiredReps;
+
+        const newCompletedIds = isFullyDone
+          ? [...progress.dailyProgress.completedMissionIds, missionId]
+          : progress.dailyProgress.completedMissionIds;
+
+        const starsForThisRep = isFullyDone ? mission.rewardStars : 1; // 1 star per rep, bonus on completion
 
         set({
           progress: {
-            ...state.progress,
-            totalStars: state.progress.totalStars + mission.rewardStars,
-            completedMissions: [...state.progress.completedMissions, newCompletion],
+            ...progress,
+            totalStars: progress.totalStars + starsForThisRep,
+            dailyProgress: {
+              ...progress.dailyProgress,
+              completedMissionIds: newCompletedIds,
+              missionReps: newMissionReps,
+            },
+          },
+        });
+
+        if (isFullyDone) {
+          return {
+            status: 'mission-completed',
+            starsAdded: starsForThisRep,
+          };
+        }
+
+        return {
+          status: 'rep-completed',
+          repsNow: newReps,
+          repsRequired: mission.requiredReps,
+          starsAdded: starsForThisRep,
+        };
+      },
+
+      claimDailyReward: () => {
+        const currentState = get();
+        const progress = ensureTodayProgress(currentState.progress);
+
+        // Already claimed today?
+        if (progress.dailyProgress.dailyRewardClaimed) {
+          return { status: 'already-claimed' };
+        }
+
+        // Check if all missions completed today
+        const activeMissionIds = missions.filter((m) => m.isActive).map((m) => m.id);
+        const allDone = activeMissionIds.every((id) =>
+          progress.dailyProgress.completedMissionIds.includes(id)
+        );
+
+        if (!allDone) {
+          const remaining = activeMissionIds.length - progress.dailyProgress.completedMissionIds.length;
+          return { status: 'not-ready', reason: `Còn ${remaining} bài nữa` };
+        }
+
+        // Award daily reward
+        const reward = getDailyReward(progress.totalDaysCompleted);
+        const item = getItemById(reward.itemId);
+        if (!item) {
+          return { status: 'not-ready', reason: 'Reward item not found' };
+        }
+
+        const newUnlockedItemIds = progress.unlockedItemIds.includes(reward.itemId)
+          ? progress.unlockedItemIds
+          : [...progress.unlockedItemIds, reward.itemId];
+
+        set({
+          progress: {
+            ...progress,
+            totalStars: progress.totalStars + reward.bonusStars,
+            totalDaysCompleted: progress.totalDaysCompleted + 1,
+            dailyProgress: {
+              ...progress.dailyProgress,
+              dailyRewardClaimed: true,
+            },
             unlockedItemIds: newUnlockedItemIds,
           },
         });
 
         return {
           status: 'awarded',
-          starsAdded: mission.rewardStars,
-          unlockedItemId: mission.rewardItemId,
+          starsAdded: reward.bonusStars,
+          unlockedItemId: reward.itemId,
         };
       },
 
@@ -193,12 +286,26 @@ export const useProgressStore = create<ProgressStore>()(
       name: 'little-steps-progress',
       onRehydrateStorage: () => (state) => {
         if (state) {
-          // Validate persisted state
-          const result = ChildProgressStateSchema.safeParse(state.progress);
-          if (!result.success) {
-            // Reset to default if corrupted
-            state.progress = getDefaultProgress();
+          // Migration: if old state format or missing dailyProgress, reset
+          if (!state.progress.dailyProgress || state.progress.version < 2) {
+            const today = new Date().toISOString().split('T')[0];
+            state.progress = {
+              ...state.progress,
+              version: 2,
+              totalDaysCompleted: state.progress.totalDaysCompleted ?? 0,
+              dailyProgress: {
+                date: today,
+                completedMissionIds: [],
+                missionReps: {},
+                dailyRewardClaimed: false,
+              },
+              unlockedItemIds: state.progress.unlockedItemIds ?? [],
+              equippedAccessoryItemIds: state.progress.equippedAccessoryItemIds ?? [],
+              roomLayout: state.progress.roomLayout ?? {},
+            };
           }
+          // Ensure daily progress is for today
+          state.progress = ensureTodayProgress(state.progress);
           state.setHydrated();
         }
       },
